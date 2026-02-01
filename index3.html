@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Just Click - Ultimate Chaos Troll v3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        /* --- Animations --- */
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); } 20%, 40%, 60%, 80% { transform: translateX(5px); } }
+        @keyframes confetti-fall { 0% { transform: translateY(-100vh) rotateZ(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotateZ(720deg); opacity: 0; } }
+        @keyframes glitch { 0% { transform: translate(0); } 20% { transform: translate(-3px, 3px); } 40% { transform: translate(-3px, -3px); } 60% { transform: translate(3px, 3px); } 80% { transform: translate(3px, -3px); } 100% { transform: translate(0); } }
+        @keyframes trophy-rotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+        @keyframes zoom-out { from { transform: scale(1); opacity: 1; } to { transform: scale(0.1); opacity: 0; } }
+        @keyframes spin-screen { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes rainbow-bg { 0% { background-color: red; } 15% { background-color: orange; } 30% { background-color: yellow; } 45% { background-color: lime; } 60% { background-color: cyan; } 75% { background-color: blue; } 90% { background-color: magenta; } 100% { background-color: red; } }
+        @keyframes progress-bar { from { width: 0%; } to { width: 100%; } }
+        @keyframes button-spin { from { transform: rotate(0deg) scale(1); } to { transform: rotate(360deg) scale(1); } }
+        @keyframes button-shrink { 0%, 100% { transform: scale(1); } 50% { transform: scale(0.5); } }
+        @keyframes button-snake { 0% { transform: translateX(0px); } 25% { transform: translateX(10px) rotate(5deg); } 50% { transform: translateX(-10px) rotate(-5deg); } 75% { transform: translateX(5px) rotate(3deg); } 100% { transform: translateX(0px); } }
+
+
+        /* --- Base Styles --- */
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            cursor: default;
+            position: relative;
+            /* UPDATED: Added background image layered over gradient */
+            background:
+                /* Optional dark overlay for better text contrast */
+                /* linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)), */
+                /* Your image */
+                url('image_ae124f.jpg') center/cover no-repeat fixed,
+                /* Fallback gradient */
+                radial-gradient(circle, #e0e7ff 0%, #c7d2fe 50%, #a5b4fc 100%);
+            min-height: 100vh; /* Ensure background covers full height */
+        }
+        /* --- Effect Classes --- */
+        .shake { animation: shake 0.5s ease-in-out; }
+        .glitch { animation: glitch 0.1s linear infinite; }
+        .spin-body { animation: spin-screen 5s linear infinite; } /* Screen spin effect */
+        .rainbow-flash { animation: rainbow-bg 0.5s linear infinite; } /* Color flash effect */
+        .mouse-frozen { cursor: wait !important; /* Indicate frozen state */ }
+
+        .confetti { position: absolute; width: 10px; height: 10px; background-color: red; opacity: 0; animation: confetti-fall 3s linear forwards; top: -50px; z-index: 100; }
+        .trophy { font-size: 5rem; display: inline-block; animation: trophy-rotate 5s linear infinite; }
+        .progress-bar-bg { background-color: #e5e7eb; border-radius: 0.25rem; overflow: hidden; height: 1.5rem; width: 80%; margin: 1rem auto; border: 1px solid #9ca3af; }
+        .progress-bar-fill { background-color: #3b82f6; height: 100%; width: 0%; transition: width 0.2s linear; }
+
+        /* --- Button Styles --- */
+        #startButton, #fakeStartButton, #realStartButton, .fakeButton, .fakeLargeButton, #finalTinyButton, #invisibleButton { transition: all 0.1s ease-out; touch-action: none; position: absolute; z-index: 10; cursor: pointer; }
+        #startButton, #fakeStartButton, .fakeLargeButton { padding: 1rem 2rem; background-color: #2563eb; color: white; font-size: 1.25rem; font-weight: 700; border-radius: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); white-space: nowrap; }
+        #startButton:hover, #fakeStartButton:hover { background-color: #1d4ed8; }
+        .fakeLargeButton { opacity: 0.7; filter: grayscale(50%); }
+        #realStartButton, .fakeButton { background-color: rgba(0,0,255,0.3); border: 1px solid rgba(0,0,255,0.5); width: 10px; height: 10px; border-radius: 50%; }
+        #realStartButton:hover, .fakeButton:hover { background-color: rgba(0,0,255,0.8); transform: scale(1.5); opacity: 1 !important; }
+        .fakeButton.disappearing:hover { opacity: 0 !important; transform: scale(0.5); pointer-events: none; }
+        #finalTinyButton { background-color: rgba(255,0,0,0.4); border: none; width: 3px; height: 3px; border-radius: 1px; z-index: 90; opacity: 0.5; }
+        #finalTinyButton:hover { background-color: red; transform: scale(3); opacity: 1; }
+        #invisibleButton { width: 30px; height: 30px; background: transparent; border: none; opacity: 0; /* Completely invisible but has size */ z-index: 95; }
+
+        /* Button Effect Animations */
+        .button-effect-spin { animation: button-spin 1s linear infinite; }
+        .button-effect-shrink { animation: button-shrink 1s ease-in-out infinite; }
+        .button-effect-snake { animation: button-snake 1.5s ease-in-out infinite; }
+
+
+        /* --- Screen Overlay Styles --- */
+        .screen { transition: opacity 0.5s ease-in-out; position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 1rem; }
+        .hidden { opacity: 0; pointer-events: none; }
+        .visible { opacity: 1; pointer-events: auto; }
+
+        /* Specific Screen Styles (Z-indexes adjusted) */
+        #gameTitle { z-index: 40; } /* Title below most overlays */
+        #timer { z-index: 100; } /* Keep timer on top */
+        #fakeLoadingScreen, #trollMessageScreen { background-color: rgba(0,0,0,0.8); color: white; z-index: 70; }
+        #lostScreen { background-color: rgba(0,0,0,0.7); color: white; z-index: 55; }
+        #findScreen { background-color: rgba(243, 244, 246, 0.9); color: #1f2937; z-index: 54; }
+        #fakeErrorScreen { background-color: rgba(254, 243, 199, 0.9); border: 4px solid #f59e0b; color: #713f12; z-index: 65; }
+        #fakeVirusWarning { background-color: rgba(17, 24, 39, 0.95); color: white; z-index: 66; border: 3px solid red; box-shadow: 0 0 20px rgba(255,0,0,0.5); }
+        #fakeVirusWarning h2 { color: red; animation: shake 0.3s infinite; }
+        #backgroundFlash { pointer-events: none; z-index: 45; font-size: 10vw; font-weight: bold; color: rgba(255, 0, 0, 0.5); animation: shake 0.2s infinite; }
+        #endlessCongratsScreen { background-color: rgba(0,0,0,0.7); color: lime; z-index: 85; font-family: 'Courier New', Courier, monospace; }
+        #fakeUpdateScreen { background-color: rgba(31, 41, 55, 0.95); color: #d1d5db; z-index: 86; } /* bg-gray-800 text-gray-300 */
+        #fakeVirusDeletingScreen { background-color: rgba(0,0,0,0.98); color: red; font-family: 'Consolas', monospace; z-index: 87; }
+        #tinyButtonScreen { background-color: rgba(255, 255, 255, 0.95); color: #111827; z-index: 88; }
+        #graphicsOverloadScreen { background-color: rgba(255,0,0,0.8); color: white; z-index: 89; border: 5px dashed yellow; }
+        #ultraChaosHintScreen { background-color: rgba(0,0,0,0.85); color: #9ca3af; z-index: 94; } /* text-gray-400 */
+        #superEndScreen { background-color: #111827; color: #d1d5db; z-index: 95; }
+        #superEndScreen .final-message { animation: zoom-out 5s ease-in forwards 1s; }
+
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen m-0 p-0 relative">
+
+    <h1 id="gameTitle" class="fixed top-5 left-1/2 -translate-x-1/2 text-4xl md:text-5xl font-bold text-white text-center select-none pointer-events-none" style="text-shadow: 2px 2px 6px rgba(0,0,0,0.7);">
+        Just Click
+    </h1>
+
+    <div id="confettiContainer" class="absolute inset-0 pointer-events-none overflow-hidden z-[101]"></div>
+    <div id="gameArea" class="absolute inset-0 w-full h-full">
+        <button id="startButton" class="left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">Start</button>
+        <button id="fakeStartButton" class="hidden">Start</button>
+        </div>
+
+    <div id="timer" class="fixed top-4 left-4 bg-white/80 backdrop-blur-sm px-3 py-1 rounded-md shadow text-gray-700 text-lg">Time: 0s</div>
+
+    <div id="fakeLoadingScreen" class="screen hidden"><div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500 mb-4"></div><p id="loadingText" class="text-2xl">Loading game...</p></div>
+    <div id="trollMessageScreen" class="screen hidden"><h2 class="text-6xl font-bold mb-4 animate-bounce">🤣</h2><p id="trollText" class="text-3xl mb-6">Just Kidding!</p><button id="tryAgainButton" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-semibold text-lg shadow-md">TRY AGAIN!</button></div>
+    <div id="lostScreen" class="screen hidden"><h2 class="text-4xl font-bold mb-4 text-red-500 animate-pulse">You lost!</h2><p class="text-xl mb-6">The button vanished... Click anywhere to continue.</p></div>
+    <div id="findScreen" class="screen hidden"><h2 class="text-3xl font-bold mb-4">Find the REAL Start Button!</h2><p class="text-lg">It's tiny, hidden, and there are fakes... Good luck!</p></div>
+    <div id="fakeErrorScreen" class="screen hidden"><h2 class="text-2xl font-bold mb-2">⚠️ System Alert ⚠️</h2><p id="fakeErrorText" class="text-lg">Error: Skill Issue Detected.</p><button onclick="hideOverlay('fakeErrorScreen')" class="mt-4 px-4 py-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md text-sm">Close</button></div>
+    <div id="fakeVirusWarning" class="screen hidden"><h2 class="text-3xl font-bold mb-4">🚨 VIRUS WARNING! 🚨</h2><p class="text-xl mb-6">Malicious click detected! System integrity compromised!</p><button onclick="hideOverlay('fakeVirusWarning')" class="px-6 py-2 bg-red-700 hover:bg-red-800 text-white rounded-md font-semibold text-lg shadow-md">Quarantine Click</button></div>
+    <div id="backgroundFlash" class="screen hidden pointer-events-none"><p id="backgroundFlashText"></p></div>
+    <div id="endlessCongratsScreen" class="screen hidden"><p id="congratsText" class="text-4xl md:text-6xl font-bold"></p></div>
+    <div id="fakeUpdateScreen" class="screen hidden">
+        <h2 class="text-3xl font-bold mb-4">Update Required</h2>
+        <p class="text-lg mb-2">Installing essential game components (5.0 GB)...</p>
+        <div class="progress-bar-bg"><div id="updateProgressBar" class="progress-bar-fill"></div></div>
+        <p id="updateStatus" class="text-sm text-gray-400">Initializing...</p>
+    </div>
+     <div id="fakeVirusDeletingScreen" class="screen hidden">
+        <h2 class="text-5xl font-bold mb-6 animate-pulse">CRITICAL VIRUS DETECTED!</h2>
+        <p class="text-2xl mb-4">Deleting System Files...</p>
+        <p id="deleteCountdown" class="text-6xl font-mono font-bold">5</p>
+    </div>
+    <div id="tinyButtonScreen" class="screen hidden"><h2 class="text-3xl font-bold mb-4">But can you click THIS one?</h2><p class="text-lg">It's the final challenge... maybe.</p></div>
+    <div id="graphicsOverloadScreen" class="screen hidden"><h2 class="text-4xl font-bold mb-4 animate-ping">⚠️ GRAPHICS OVERLOAD ⚠️</h2><p class="text-xl">Your system may not handle these advanced visuals!</p><button onclick="hideOverlay('graphicsOverloadScreen'); stopColorFlash();" class="mt-6 px-4 py-2 bg-yellow-500 text-black rounded font-semibold">I Understand the Risks</button></div>
+    <div id="ultraChaosHintScreen" class="screen hidden pointer-events-none"><h2 class="text-4xl font-bold mb-6">FINAL LEVEL: CHAOS MODE</h2><p class="text-2xl">"Trust your instincts. Find the invisible Start."</p><p class="text-lg mt-4">(Your cursor is gone. Good luck.)</p></div>
+    <div id="superEndScreen" class="screen hidden">
+        <div class="final-message">
+            <p class="trophy">🏆</p>
+            <h2 class="text-4xl font-bold mt-4 mb-2">Best Clicker Award (LOL)</h2>
+            <p id="finalTimeTotal" class="text-xl mb-6"></p>
+            <p class="text-2xl">"You wasted <span id="wastedTime">X</span> seconds trying to click. Congrats. 😂🎯"</p>
+        </div>
+         <button onclick="location.reload()" class="mt-8 px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-bold text-lg shadow-xl">Play Again (If you dare)?</button>
+    </div>
+
+
+    <script>
+        // --- DOM Elements ---
+        const body = document.body;
+        const gameArea = document.getElementById('gameArea');
+        const startButton = document.getElementById('startButton');
+        const fakeStartButton = document.getElementById('fakeStartButton');
+        const timerDisplay = document.getElementById('timer');
+        const confettiContainer = document.getElementById('confettiContainer');
+        // Overlays
+        const fakeLoadingScreen = document.getElementById('fakeLoadingScreen'); const loadingText = document.getElementById('loadingText');
+        const trollMessageScreen = document.getElementById('trollMessageScreen'); const trollText = document.getElementById('trollText'); const tryAgainButton = document.getElementById('tryAgainButton');
+        const lostScreen = document.getElementById('lostScreen');
+        const findScreen = document.getElementById('findScreen');
+        const fakeErrorScreen = document.getElementById('fakeErrorScreen'); const fakeErrorText = document.getElementById('fakeErrorText');
+        const fakeVirusWarning = document.getElementById('fakeVirusWarning');
+        const backgroundFlash = document.getElementById('backgroundFlash'); const backgroundFlashText = document.getElementById('backgroundFlashText');
+        const endlessCongratsScreen = document.getElementById('endlessCongratsScreen'); const congratsText = document.getElementById('congratsText');
+        const fakeUpdateScreen = document.getElementById('fakeUpdateScreen'); const updateProgressBar = document.getElementById('updateProgressBar'); const updateStatus = document.getElementById('updateStatus');
+        const fakeVirusDeletingScreen = document.getElementById('fakeVirusDeletingScreen'); const deleteCountdown = document.getElementById('deleteCountdown');
+        const tinyButtonScreen = document.getElementById('tinyButtonScreen');
+        const graphicsOverloadScreen = document.getElementById('graphicsOverloadScreen');
+        const ultraChaosHintScreen = document.getElementById('ultraChaosHintScreen');
+        const superEndScreen = document.getElementById('superEndScreen'); const finalTimeTotal = document.getElementById('finalTimeTotal'); const wastedTime = document.getElementById('wastedTime');
+        // Game Title Element
+        const gameTitle = document.getElementById('gameTitle');
+
+        // --- Game State ---
+        let seconds = 0; let totalSeconds = 0; let timerInterval = null;
+        let gameActive = true; let timerStarted = false; let mouseFrozen = false;
+        const PHASE = { RUNNING: 1, FAKE_CLONE_VISIBLE: 1.5, FAKE_LOADING: 1.7, LOST_TRANSITION: 1.9, LOST: 2, FINDING: 3, ENDLESS_CONGRATS: 4, FAKE_UPDATE: 4.2, FAKE_VIRUS_DELETING: 4.4, TINY_BUTTON_CHALLENGE: 5, ULTRA_CHAOS_MODE: 6, WON: 7 };
+        let currentPhase = PHASE.RUNNING;
+        let trollTimeout1 = null; let trollTimeout2 = null; let randomTrollInterval = null; let endlessCongratsInterval = null; let screenSpinInterval = null; let colorFlashInterval = null; let mouseFreezeTimeout = null;
+
+        // --- Config ---
+        const FAKE_CLONE_TIME = 8; const VANISH_TIME = 18;
+        const NUM_DECOYS = 15; const NUM_LARGE_FAKES = 3;
+        const ENDLESS_CONGRATS_COUNT = 25; const ENDLESS_CONGRATS_INTERVAL_MS = 150;
+        const RANDOM_TROLL_INTERVAL_MS = 2500; // More frequent trolls in phase 3
+        const MOUSE_FREEZE_DURATION_MS = 1500;
+
+        // --- Sound Effects (Tone.js) ---
+        let moveSynth, clickSynth, successSynth, loseSynth, decoySynth, errorSynth, trollSynth, glitchSynth, finalWinSynth, updateSynth, virusSynth, chaosMusic;
+        let soundsReady = false;
+
+        function initSounds() {
+            if (soundsReady || Tone.context.state === 'running') return;
+            Tone.start().then(() => {
+                moveSynth = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.05, release: 0.2 } }).toDestination();
+                clickSynth = new Tone.Player("data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YV").toDestination(); // Base64 click sound
+                successSynth = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: { attack: 0.05, decay: 0.2, sustain: 0.3, release: 0.5 } }).toDestination();
+                loseSynth = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.01, decay: 0.5, sustain: 0.1, release: 0.5 } }).toDestination();
+                decoySynth = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.01, release: 0.1 } }).toDestination();
+                errorSynth = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.1 } }).toDestination();
+                trollSynth = new Tone.Synth({ oscillator: { type: 'pulse', width: 0.8 }, envelope: { attack: 0.02, decay: 0.3, sustain: 0.2, release: 0.3 } }).toDestination();
+                glitchSynth = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.05 } }).toDestination();
+                finalWinSynth = new Tone.Synth({ oscillator: { type: 'pwm', modulationFrequency: 0.2 }, envelope: { attack: 0.1, decay: 0.4, sustain: 0.6, release: 1.0 } }).toDestination();
+                updateSynth = new Tone.Synth({ oscillator: { type: 'sine' }, volume: -10, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination(); // Subtle update progress sound
+                virusSynth = new Tone.Synth({ oscillator: { type: 'square', }, volume: -5, envelope: { attack: 0.01, decay: 0.8, sustain: 0.1, release: 0.5 } }).toDestination(); // Alarming virus sound
+                // Basic Rickroll-esque tune for chaos mode
+                 chaosMusic = new Tone.Sequence((time, note) => {
+                     // Check if trollSynth exists before triggering
+                     if (trollSynth) {
+                        trollSynth.triggerAttackRelease(note, '8n', time);
+                     }
+                 }, ['F4', 'G4', 'Bb4', 'G4', 'Eb5', 'Eb5', 'D5', null, 'F4', 'G4', 'Bb4', 'G4', 'D5', 'D5', 'C5', null, 'F4', 'G4', 'Bb4', 'G4', 'C5', 'C5', 'Bb4', 'Bb4', 'A4', 'G4', 'F4'], '4n');
+                 chaosMusic.loop = true;
+                 chaosMusic.humanize = true;
+
+                soundsReady = true; console.log("Audio Context Started");
+            }).catch(e => console.error("Audio context start failed:", e));
+        }
+
+        // Sound playing functions
+        const playSound = (synth, note, duration, time = Tone.now()) => { /* ... same as before ... */ if (soundsReady && synth && Tone.context.state === 'running') { try { if (synth instanceof Tone.Player) { if (synth.loaded) synth.start(time); } else if (synth instanceof Tone.NoiseSynth) synth.triggerAttackRelease(duration, time); else synth.triggerAttackRelease(note, duration, time); } catch (e) { console.error("Sound play error:", e); } } };
+        const playFinalWinSound = () => { /* ... same as before ... */ if (soundsReady && finalWinSynth && Tone.context.state === 'running') { const now = Tone.now(); finalWinSynth.triggerAttackRelease('C4', '1n', now); finalWinSynth.triggerAttackRelease('G4', '1n', now + 0.5); finalWinSynth.triggerAttackRelease('C5', '2n', now + 1.0); } };
+        const playSuccessChord = () => { /* ... same as before ... */ if (soundsReady && successSynth && Tone.context.state === 'running') { const now = Tone.now(); successSynth.triggerAttackRelease(['C4', 'E4', 'G4'], '0.5n', now); } }
+         const startChaosMusic = () => { if (soundsReady && chaosMusic && Tone.Transport.state !== 'started') { Tone.Transport.start(); chaosMusic.start(0); }};
+         const stopChaosMusic = () => { if (soundsReady && chaosMusic) { chaosMusic.stop(); Tone.Transport.stop(); Tone.Transport.cancel(); }};
+
+
+        // --- Timer Logic ---
+        function startTimer() { /* ... same as before ... */ if (!timerStarted && gameActive) { timerStarted = true; timerInterval = setInterval(() => { if (currentPhase < PHASE.WON) { totalSeconds++; timerDisplay.textContent = `Time: ${totalSeconds}s`; } if (currentPhase < PHASE.ENDLESS_CONGRATS) { seconds++; } if (currentPhase === PHASE.RUNNING && seconds >= FAKE_CLONE_TIME && trollTimeout1 === null) { triggerFakeClone(); } if ((currentPhase === PHASE.RUNNING || currentPhase === PHASE.FAKE_CLONE_VISIBLE) && totalSeconds >= VANISH_TIME && trollTimeout2 === null) { triggerVanish(); } }, 1000); } }
+        function stopTimer() { /* ... same as before ... */ clearInterval(timerInterval); clearInterval(randomTrollInterval); clearInterval(endlessCongratsInterval); clearInterval(screenSpinInterval); clearInterval(colorFlashInterval); clearTimeout(mouseFreezeTimeout); timerInterval = null; randomTrollInterval = null; endlessCongratsInterval = null; screenSpinInterval = null; colorFlashInterval = null; mouseFreezeTimeout = null; timerStarted = false; stopChaosMusic(); } // Also stop chaos music
+        function resetPhase1Timer() { /* ... same as before ... */ seconds = 0; trollTimeout1 = null; }
+
+        // --- Phase Transitions & Trolls ---
+        // (Phase 1, 1.5, 1.7, 1.9, 2 logic mostly unchanged)
+        function triggerFakeClone() { /* ... same as before ... */ if (currentPhase !== PHASE.RUNNING) return; console.log("Triggering fake clone"); trollTimeout1 = setTimeout(() => {}, 0); currentPhase = PHASE.FAKE_CLONE_VISIBLE; playSound(trollSynth, 'E5', '4n'); const r = startButton.getBoundingClientRect(); const oX = (Math.random() - 0.5) * 50; const oY = (Math.random() - 0.5) * 50; let fL = r.left + oX; let fT = r.top + oY; const vW = window.innerWidth; const vH = window.innerHeight; const fW = fakeStartButton.offsetWidth; const fH = fakeStartButton.offsetHeight; fL = Math.max(0, Math.min(fL, vW - fW)); fT = Math.max(0, Math.min(fT, vH - fH)); fakeStartButton.style.left = `${fL}px`; fakeStartButton.style.top = `${fT}px`; fakeStartButton.style.transform = 'translate(0,0)'; fakeStartButton.classList.remove('hidden'); fakeStartButton.classList.add('visible'); }
+        function handleFakeCloneClick() { /* ... same as before ... */ if (currentPhase !== PHASE.FAKE_CLONE_VISIBLE) return; console.log("Fake clone clicked!"); playSound(clickSynth); currentPhase = PHASE.FAKE_LOADING; gameActive = false; stopTimer(); startButton.classList.add('hidden'); fakeStartButton.classList.add('hidden'); showOverlay('fakeLoadingScreen'); loadingText.textContent = "Loading game... 10%"; playSound(trollSynth, 'C3', '2n'); let p = 10; const lI = setInterval(() => { p += Math.floor(Math.random() * 15) + 5; if (p >= 99) { p = 99; clearInterval(lI); setTimeout(() => { hideOverlay('fakeLoadingScreen'); showTrollMessage("Just Kidding!", "🤣"); playSound(loseSynth, 'A2', '1n'); }, 500); } loadingText.textContent = `Loading game... ${p}%`; playSound(trollSynth, ['C3', 'D3', 'E3', 'F3'][Math.floor(Math.random()*4)], '8n'); }, 700); }
+        function showTrollMessage(message, emoji = "🤣") { /* ... same as before ... */ trollText.textContent = message; const h2 = trollMessageScreen.querySelector('h2'); if (h2) h2.textContent = emoji; showOverlay('trollMessageScreen'); }
+        function resetToPhase1() { /* ... same as before, added cleanup for new effects ... */ console.log("Resetting to Phase 1"); hideAllOverlays(); currentPhase = PHASE.RUNNING; gameActive = true; resetPhase1Timer(); startButton.style.left = '50%'; startButton.style.top = '50%'; startButton.style.transform = 'translate(-50%, -50%)'; startButton.className = startButton.className.replace(/button-effect-\w+/g, '').trim(); // Remove effects
+            startButton.classList.remove('hidden'); fakeStartButton.classList.add('hidden'); fakeStartButton.classList.remove('visible'); document.querySelectorAll('#realStartButton, .fakeButton, #finalTinyButton, #invisibleButton').forEach(btn => btn.remove()); gameArea.removeEventListener('contextmenu', handleRightClick); stopScreenSpin(); stopColorFlash(); body.style.cursor = 'default'; mouseFrozen = false; startTimer(); }
+        function triggerVanish() { /* ... same as before ... */ if (currentPhase >= PHASE.LOST_TRANSITION || trollTimeout2 !== null) return; console.log("Triggering vanish"); trollTimeout2 = setTimeout(() => {}, 0); currentPhase = PHASE.LOST_TRANSITION; gameActive = false; stopTimer(); playSound(loseSynth, 'G2', '1n'); startButton.classList.add('hidden'); fakeStartButton.classList.add('hidden'); fakeStartButton.classList.remove('visible'); showOverlay('lostScreen'); lostScreen.addEventListener('click', transitionToFinding, { once: true }); }
+        function transitionToFinding() { /* ... same as before ... */ if (currentPhase !== PHASE.LOST_TRANSITION) return; console.log("Transitioning to Finding Phase"); playSound(clickSynth); hideOverlay('lostScreen'); currentPhase = PHASE.FINDING; setupFindingPhase(); }
+        function setupFindingPhase() { /* ... same as before, adjusted troll interval ... */ console.log("Setting up Finding Phase"); gameActive = true; showOverlay('findScreen'); setTimeout(() => hideOverlay('findScreen'), 3000); document.querySelectorAll('#realStartButton, .fakeButton, .fakeLargeButton').forEach(btn => btn.remove()); const realButton = document.createElement('button'); realButton.id = 'realStartButton'; placeHiddenButton(realButton); realButton.addEventListener('click', handleRealButtonClick); gameArea.appendChild(realButton); for (let i = 0; i < NUM_DECOYS; i++) { const fakeBtn = document.createElement('button'); fakeBtn.classList.add('fakeButton'); if (Math.random() < 0.3) fakeBtn.classList.add('disappearing'); placeHiddenButton(fakeBtn); fakeBtn.addEventListener('click', handleFakeButtonClick); gameArea.appendChild(fakeBtn); } if (!randomTrollInterval) { randomTrollInterval = setInterval(triggerRandomTrollEffect, RANDOM_TROLL_INTERVAL_MS); } gameArea.addEventListener('contextmenu', handleRightClick); if (!timerStarted) { startTimer(); } }
+        function placeHiddenButton(btnElement) { /* ... same as before ... */ const vW = window.innerWidth; const vH = window.innerHeight; let bS; try { bS = parseInt(window.getComputedStyle(btnElement).width) || (btnElement.id === 'finalTinyButton' ? 3 : (btnElement.id === 'invisibleButton' ? 30 : 10)); } catch { bS = (btnElement.id === 'finalTinyButton' ? 3 : (btnElement.id === 'invisibleButton' ? 30 : 10)); } const bf = 15; let rL, rT; if (Math.random() < 0.2) { const e = Math.floor(Math.random() * 4); if (e === 0) rT = bf + Math.random() * bf; else if (e === 2) rT = vH - bS - bf - Math.random() * bf; else rT = bf + Math.random() * (vH - bS - 2 * bf); if (e === 3) rL = bf + Math.random() * bf; else if (e === 1) rL = vW - bS - bf - Math.random() * bf; else rL = bf + Math.random() * (vW - bS - 2 * bf); } else { rL = bf + Math.random() * (vW - bS - 2 * bf); rT = bf + Math.random() * (vH - bS - 2 * bf); } btnElement.style.left = `${Math.max(0, Math.min(rL || 0, vW - bS))}px`; btnElement.style.top = `${Math.max(0, Math.min(rT || 0, vH - bS))}px`; }
+
+        // --- NEW/MODIFIED: Random Troll Effects (Phase 3) ---
+        function triggerRandomTrollEffect() {
+            if (currentPhase !== PHASE.FINDING || !gameActive) return;
+            // Increased variety of trolls
+            const effect = Math.floor(Math.random() * 7); // 0-6
+
+            switch (effect) {
+                case 0: shakeScreen(); break;
+                case 1: showRandomFakeError(); break;
+                case 2: glitchScreen(); break;
+                case 3: flashBackgroundMessage(); break;
+                case 4: startScreenSpin(); break; // New
+                case 5: startColorFlash(); break; // New
+                case 6: startTornadoMode(); break; // New
+                // Mouse freeze is triggered by proximity, not interval
+            }
+        }
+        function shakeScreen() { /* ... same as before ... */ console.log("Troll: Screen Shake"); playSound(errorSynth, null, '0.3s'); body.classList.add('shake'); setTimeout(() => body.classList.remove('shake'), 500); }
+        function glitchScreen() { /* ... same as before ... */ console.log("Troll: Screen Glitch"); playSound(glitchSynth, null, '0.1s'); body.classList.add('glitch'); setTimeout(() => body.classList.remove('glitch'), 200); }
+        function showRandomFakeError() { /* ... same as before ... */ console.log("Troll: Fake Error"); const e = ["Skill Issue.", "Click Not Found.", "Patience levels critical.", "Easy mode disabled.", "Too much failing.", "Cannot read property 'click'.", "Stack Overflow."]; fakeErrorText.textContent = `Error: ${e[Math.floor(Math.random() * e.length)]}`; showOverlay('fakeErrorScreen'); playSound(errorSynth, null, '0.5s'); setTimeout(() => hideOverlay('fakeErrorScreen'), 2500); }
+        function flashBackgroundMessage() { /* ... same as before ... */ console.log("Troll: Background Flash"); const m = ["CAN'T CLICK?", "TOO SLOW!", "KEEP TRYING!", "LOL", "NICE TRY", "?", "!"]; backgroundFlashText.textContent = m[Math.floor(Math.random() * m.length)]; showOverlay('backgroundFlash'); playSound(trollSynth, 'A4', '8n'); setTimeout(() => hideOverlay('backgroundFlash'), 500); }
+        function showFakeVirusWarning() { /* ... same as before ... */ console.log("Troll: Fake Virus Warning"); showOverlay('fakeVirusWarning'); playSound(loseSynth, 'C2', '2n'); setTimeout(() => hideOverlay('fakeVirusWarning'), 3000); }
+
+        // NEW Troll Functions
+        function startScreenSpin() {
+             console.log("Troll: Screen Spin");
+             if (screenSpinInterval) return; // Don't stack spins
+             playSound(trollSynth, 'G3', '1n');
+             body.classList.add('spin-body');
+             // Stop spinning after a while
+             screenSpinInterval = setTimeout(() => {
+                 stopScreenSpin();
+             }, 5000 + Math.random() * 3000); // Spin for 5-8 seconds
+        }
+        function stopScreenSpin() {
+             body.classList.remove('spin-body');
+             clearTimeout(screenSpinInterval);
+             screenSpinInterval = null;
+        }
+        function startColorFlash() {
+             console.log("Troll: Color Flash");
+             if (colorFlashInterval) return; // Don't stack flashes
+             playSound(glitchSynth, null, '0.5s');
+             showOverlay('graphicsOverloadScreen'); // Show warning
+             body.classList.add('rainbow-flash');
+             // This effect is stopped when the user clicks the warning button OR after a timeout
+             colorFlashInterval = setTimeout(() => {
+                 stopColorFlash();
+                 hideOverlay('graphicsOverloadScreen');
+             }, 7000 + Math.random() * 5000); // Flash for 7-12 seconds if not dismissed
+        }
+         function stopColorFlash() {
+             body.classList.remove('rainbow-flash');
+             clearTimeout(colorFlashInterval);
+             colorFlashInterval = null;
+        }
+         function freezeMouse() {
+             if (mouseFrozen) return;
+             console.log("Troll: Mouse Freeze");
+             mouseFrozen = true;
+             body.classList.add('mouse-frozen');
+             body.style.pointerEvents = 'none'; // Disable clicks/hovers
+             playSound(errorSynth, null, '0.2s');
+
+             mouseFreezeTimeout = setTimeout(() => {
+                 body.classList.remove('mouse-frozen');
+                 body.style.pointerEvents = 'auto';
+                 mouseFrozen = false;
+                 mouseFreezeTimeout = null;
+                 console.log("Mouse Unfrozen");
+             }, MOUSE_FREEZE_DURATION_MS);
+         }
+         function startTornadoMode() {
+             console.log("Troll: Tornado Mode");
+             playSound(loseSynth, 'A3', '1n');
+             // Apply to all clickable buttons currently on screen (real + fakes in phase 3)
+             const buttons = document.querySelectorAll('#realStartButton, .fakeButton');
+             buttons.forEach(btn => {
+                 const viewportWidth = window.innerWidth;
+                 const viewportHeight = window.innerHeight;
+                 const btnSize = parseInt(window.getComputedStyle(btn).width) || 10;
+                 const randomLeft = Math.random() * (viewportWidth - btnSize);
+                 const randomTop = Math.random() * (viewportHeight - btnSize);
+                 btn.style.transition = 'left 0.5s cubic-bezier(.17,.67,.83,.67), top 0.5s cubic-bezier(.17,.67,.83,.67)'; // Weird easing
+                 btn.style.left = `${randomLeft}px`;
+                 btn.style.top = `${randomTop}px`;
+                 // Reset transition after move
+                 setTimeout(() => { btn.style.transition = ''; }, 500);
+             });
+             // Maybe shake screen too
+             shakeScreen();
+         }
+
+
+        // --- Button Movement & Interaction Logic ---
+        function moveButton(clientX, clientY) {
+            if (mouseFrozen) return; // Don't move if mouse is frozen
+            if (!gameActive || (currentPhase !== PHASE.RUNNING && currentPhase !== PHASE.FAKE_CLONE_VISIBLE)) return;
+
+            const buttonRect = startButton.getBoundingClientRect();
+            if (!buttonRect || buttonRect.width === 0 || buttonRect.height === 0) return;
+
+            const viewportWidth = window.innerWidth; const viewportHeight = window.innerHeight;
+            const buttonCenterX = buttonRect.left + buttonRect.width / 2; const buttonCenterY = buttonRect.top + buttonRect.height / 2;
+            const distanceX = clientX - buttonCenterX; const distanceY = clientY - buttonCenterY; const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+            const triggerDistance = Math.max(120, buttonRect.width * 1.5);
+            const proximityFactor = Math.min(1, (triggerDistance - distance) / triggerDistance);
+
+            // --- Trigger Mouse Freeze (Now applies in Phase 3 FINDING only) ---
+             if (currentPhase === PHASE.FINDING) {
+                 // Check proximity to *any* clickable button in phase 3
+                 const allButtons = document.querySelectorAll('#realStartButton, .fakeButton');
+                 let freezeTrigger = false;
+                 allButtons.forEach(btn => {
+                     const rect = btn.getBoundingClientRect();
+                     if (!rect || rect.width === 0) return;
+                     const btnCenterX = rect.left + rect.width / 2;
+                     const btnCenterY = rect.top + rect.height / 2;
+                     const btnDistX = clientX - btnCenterX;
+                     const btnDistY = clientY - btnCenterY;
+                     const btnDistance = Math.sqrt(btnDistX * btnDistX + btnDistY * btnDistY);
+                     const btnTriggerDist = Math.max(30, rect.width * 2); // Smaller trigger for tiny buttons
+                     if (btnDistance < btnTriggerDist) {
+                         freezeTrigger = true;
+                     }
+                 });
+                 if (freezeTrigger) {
+                     freezeMouse();
+                     return; // Stop processing if mouse is frozen
+                 }
+             }
+
+
+            if (distance < triggerDistance && currentPhase < PHASE.FINDING) { // Only move startButton before phase 3
+                startTimer(); playSound(moveSynth, 'C5', '16n');
+                const moveStrength = 80 + 250 * proximityFactor * proximityFactor; const jitter = 70;
+                const normX = distance === 0 ? (Math.random() - 0.5) : distanceX / distance; const normY = distance === 0 ? (Math.random() - 0.5) : distanceY / distance;
+                let offsetX = -normX * moveStrength + (Math.random() - 0.5) * jitter; let offsetY = -normY * moveStrength + (Math.random() - 0.5) * jitter;
+                let newLeft = buttonRect.left + offsetX; let newTop = buttonRect.top + offsetY;
+                const maxLeft = viewportWidth - buttonRect.width; const maxTop = viewportHeight - buttonRect.height; newLeft = Math.max(0, Math.min(newLeft, maxLeft)); newTop = Math.max(0, Math.min(newTop, maxTop));
+                startButton.style.left = `${newLeft}px`; startButton.style.top = `${newTop}px`; startButton.style.transform = 'translate(0, 0)';
+
+                // --- Random Button Behavior ---
+                applyRandomButtonEffect(startButton, proximityFactor);
+
+                if (proximityFactor > 0.7 && document.querySelectorAll('.fakeLargeButton').length === 0) { splitButton(newLeft, newTop); }
+            } else if (currentPhase < PHASE.FINDING) { // Only remove effects from startButton before phase 3
+                 // Remove effects when cursor moves away
+                 startButton.className = startButton.className.replace(/button-effect-\w+/g, '').trim();
+            }
+        }
+
+        // NEW: Apply random visual effects to the button
+        function applyRandomButtonEffect(buttonElement, proximity) {
+             const effectChance = 0.05 + proximity * 0.1; // Higher chance when closer
+             if (Math.random() < effectChance) {
+                 const effectType = Math.floor(Math.random() * 3); // Spin, Shrink, Snake
+                 // Remove other effects first
+                 buttonElement.className = buttonElement.className.replace(/button-effect-\w+/g, '').trim();
+                 switch (effectType) {
+                     case 0: buttonElement.classList.add('button-effect-spin'); break;
+                     case 1: buttonElement.classList.add('button-effect-shrink'); break;
+                     case 2: buttonElement.classList.add('button-effect-snake'); break;
+                 }
+                 // Sound for effect start
+                 playSound(glitchSynth, null, '16n');
+             }
+        }
+
+
+        function splitButton(currentLeft, currentTop) { /* ... same as before ... */ playSound(trollSynth, 'G4', '8n'); for (let i = 0; i < NUM_LARGE_FAKES; i++) { const fake = startButton.cloneNode(true); fake.classList.add('fakeLargeButton'); fake.style.opacity = '0.7'; fake.style.filter = 'grayscale(50%)'; fake.style.pointerEvents = 'none'; fake.id = `fakeLarge-${i}`; const angle = (i / NUM_LARGE_FAKES) * Math.PI * 2; const offset = 80 + Math.random() * 40; const fakeLeft = currentLeft + Math.cos(angle) * offset + (Math.random() - 0.5) * 30; const fakeTop = currentTop + Math.sin(angle) * offset + (Math.random() - 0.5) * 30; fake.style.left = `${fakeLeft}px`; fake.style.top = `${fakeTop}px`; fake.style.transform = 'translate(0,0)'; gameArea.appendChild(fake); setTimeout(() => { fake.style.transition = 'opacity 0.3s ease-out'; fake.style.opacity = '0'; setTimeout(() => fake.remove(), 300); }, 600 + Math.random() * 400); } }
+        function handleFakeButtonClick(event) { /* ... same as before ... */ if (currentPhase !== PHASE.FINDING || !gameActive) return; console.log("Fake button clicked!"); playSound(decoySynth, 'B3', '16n'); const fakeBtn = event.target; fakeBtn.style.transition = 'opacity 0.2s ease, transform 0.2s ease'; fakeBtn.style.opacity = '0'; fakeBtn.style.transform = 'scale(0.5)'; fakeBtn.style.pointerEvents = 'none'; setTimeout(() => fakeBtn.remove(), 200); const randomEffect = Math.random(); if (randomEffect < 0.3) { showFakeVirusWarning(); } else if (randomEffect < 0.5) { shakeScreen(); } else if (randomEffect < 0.6) { glitchScreen(); } }
+        function handleRightClick(event) { /* ... same as before ... */ if (currentPhase !== PHASE.FINDING || !gameActive) return; event.preventDefault(); console.log("Right-click detected!"); playSound(trollSynth, 'C6', '16n'); const realButton = document.getElementById('realStartButton'); if (realButton) { const oBg = realButton.style.backgroundColor; const oT = realButton.style.transform; const oO = realButton.style.opacity; const oZ = realButton.style.zIndex; realButton.style.backgroundColor = 'rgba(255,0,0,1)'; realButton.style.transform = 'scale(4)'; realButton.style.opacity = '1'; realButton.style.zIndex = '99'; setTimeout(() => { realButton.style.backgroundColor = oBg; realButton.style.transform = oT; realButton.style.opacity = oO; realButton.style.zIndex = oZ; }, 600); } showTrollMessage("Secret revealed?", "🤫"); setTimeout(() => hideOverlay('trollMessageScreen'), 1500); gameArea.removeEventListener('contextmenu', handleRightClick); }
+
+        // --- MODIFIED Victory Path ---
+        function handleRealButtonClick() { // Click hidden button -> Endless Congrats
+             if (currentPhase !== PHASE.FINDING || !gameActive) return;
+             console.log("Real button clicked! But wait..."); playSound(successSynth, 'C4', '4n');
+             stopTimer(); gameActive = false; currentPhase = PHASE.ENDLESS_CONGRATS;
+             hideOverlay('findScreen'); document.querySelectorAll('#realStartButton, .fakeButton').forEach(btn => btn.remove()); gameArea.removeEventListener('contextmenu', handleRightClick); clearInterval(randomTrollInterval); randomTrollInterval = null; stopScreenSpin(); stopColorFlash(); // Stop phase 3 effects
+             startEndlessCongrats();
+        }
+        function startEndlessCongrats() { // Endless Congrats -> Fake Update
+             console.log("Starting Endless Congratulations..."); showOverlay('endlessCongratsScreen');
+             let count = 0; const base = "Congratulations!"; const gl = ["Congraturations!", "Congrats!", "CONGRATS!!", "Cngrtltns!", "Click?", "Why?", "Stop!"];
+             endlessCongratsInterval = setInterval(() => {
+                 count++; let txt = base; let ch = count / ENDLESS_CONGRATS_COUNT;
+                 if (Math.random() < ch * 0.5) { txt = gl[Math.floor(Math.random() * gl.length)]; } if (Math.random() < ch * 0.3) { txt += " " + String.fromCharCode(33 + Math.random() * 94); }
+                 congratsText.textContent = txt; congratsText.style.color = `hsl(${Math.random() * 360}, 100%, 70%)`; congratsText.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px) rotate(${Math.random()*4-2}deg)`;
+                 playSound(trollSynth, 440 + Math.random() * 440, '16n'); if (Math.random() < 0.2) playSound(glitchSynth, null, '32n');
+                 if (count >= ENDLESS_CONGRATS_COUNT) {
+                     clearInterval(endlessCongratsInterval); endlessCongratsInterval = null;
+                     console.log("Endless Congrats finished. Starting Fake Update.");
+                     setTimeout(startFakeUpdate, 500); // Transition to Fake Update
+                 }
+             }, ENDLESS_CONGRATS_INTERVAL_MS);
+        }
+        // NEW: Fake Update Sequence -> Fake Virus
+        function startFakeUpdate() {
+             console.log("Starting Fake Update"); hideOverlay('endlessCongratsScreen'); showOverlay('fakeUpdateScreen');
+             currentPhase = PHASE.FAKE_UPDATE; gameActive = false; // Still inactive
+             let progress = 0; updateProgressBar.style.width = '0%'; updateStatus.textContent = 'Connecting to update server...';
+             playSound(updateSynth, 'C3', '1n');
+
+             const updateInterval = setInterval(() => {
+                 progress += Math.random() * 5 + 2; // Slow, variable progress
+                 if (progress >= 100) {
+                     progress = 100;
+                     updateProgressBar.style.width = '100%';
+                     updateStatus.textContent = 'Installation finalizing...';
+                     clearInterval(updateInterval);
+                     playSound(updateSynth, 'G4', '2n');
+                     // Fail the update
+                     setTimeout(() => {
+                         updateStatus.textContent = 'Error 418: Update Failed (I\'m a teapot)';
+                         playSound(loseSynth, 'E2', '1n');
+                         // Transition to Fake Virus Deleting after failure message
+                         setTimeout(() => {
+                             startFakeVirusDeleting();
+                         }, 2500);
+                     }, 1500);
+                 } else {
+                     updateProgressBar.style.width = `${progress}%`;
+                     updateStatus.textContent = `Downloading components... (${progress.toFixed(0)}%)`;
+                     playSound(updateSynth, 220 + progress * 2, '16n'); // Pitch increases with progress
+                 }
+             }, 300); // Update progress bar relatively quickly
+        }
+        // NEW: Fake Virus Deleting -> Tiny Button Challenge
+        function startFakeVirusDeleting() {
+             console.log("Starting Fake Virus Deleting"); hideOverlay('fakeUpdateScreen'); showOverlay('fakeVirusDeletingScreen');
+             currentPhase = PHASE.FAKE_VIRUS_DELETING; gameActive = false;
+             let count = 5; deleteCountdown.textContent = count;
+             playSound(virusSynth, 'A4', '1n');
+
+             const countdownInterval = setInterval(() => {
+                 count--;
+                 if (count <= 0) {
+                     deleteCountdown.textContent = '0';
+                     clearInterval(countdownInterval);
+                     playSound(virusSynth, 'C2', '0.5n'); // Low boom/fail sound
+                     // Show "Just Kidding" then transition
+                     deleteCountdown.textContent = 'Just Kidding 😂';
+                     setTimeout(() => {
+                         console.log("Fake Virus finished. Setting up tiny button.");
+                         setupTinyButtonPhase(); // Transition to the next real challenge
+                     }, 2000);
+                 } else {
+                     deleteCountdown.textContent = count;
+                     playSound(virusSynth, 880 / count, '8n'); // Pitch increases as count decreases
+                     shakeScreen(); // Shake during countdown
+                 }
+             }, 1000);
+        }
+        // Tiny Button Challenge Setup -> Ultra Chaos Mode
+        function setupTinyButtonPhase() {
+             console.log("Setting up Tiny Button Challenge"); hideOverlay('fakeVirusDeletingScreen'); showOverlay('tinyButtonScreen');
+             currentPhase = PHASE.TINY_BUTTON_CHALLENGE; gameActive = true;
+             const tinyButton = document.createElement('button'); tinyButton.id = 'finalTinyButton';
+             placeHiddenButton(tinyButton); tinyButton.addEventListener('click', handleFinalTinyButtonClick); // Clicking this leads to Ultra Chaos
+             gameArea.appendChild(tinyButton);
+             if (!timerStarted) { startTimer(); }
+        }
+        // Click Tiny Button -> Ultra Chaos Mode
+        function handleFinalTinyButtonClick() {
+            // NOTE: This is no longer the final win!
+            if (currentPhase !== PHASE.TINY_BUTTON_CHALLENGE || !gameActive) return;
+
+            console.log("TINY BUTTON CLICKED! Entering Ultra Chaos Mode!");
+            playSound(loseSynth, 'D3', '1n'); // Sound of impending doom
+            stopTimer(); // Stop regular timer
+            gameActive = false; // Temporarily inactive during setup
+            currentPhase = PHASE.ULTRA_CHAOS_MODE;
+
+            // Clean up tiny button phase
+            hideOverlay('tinyButtonScreen');
+            document.getElementById('finalTinyButton')?.remove();
+
+            // Setup Ultra Chaos
+            setupUltraChaosMode();
+        }
+        // NEW: Ultra Chaos Mode Setup -> Actual Final Win
+        function setupUltraChaosMode() {
+             console.log("Setting up Ultra Chaos Mode");
+             showOverlay('ultraChaosHintScreen'); // Show hint
+             body.style.cursor = 'none'; // Hide the cursor!
+             gameActive = true; // Allow clicking invisible button
+
+             // Create the invisible button
+             const invisibleButton = document.createElement('button');
+             invisibleButton.id = 'invisibleButton';
+             placeHiddenButton(invisibleButton); // Place it randomly
+             invisibleButton.addEventListener('click', handleInvisibleButtonClick);
+             gameArea.appendChild(invisibleButton);
+
+             // Start the chaos music
+             startChaosMusic();
+
+             // Hint disappears after a while
+             setTimeout(() => hideOverlay('ultraChaosHintScreen'), 6000);
+
+             // Keep total timer ticking (optional)
+             if (!timerStarted) { startTimer(); }
+        }
+        // NEW: Clicking Invisible Button -> The REAL End
+        function handleInvisibleButtonClick() {
+             if (currentPhase !== PHASE.ULTRA_CHAOS_MODE || !gameActive) return;
+
+             console.log("INVISIBLE BUTTON CLICKED! YOU... YOU ACTUALLY WON?!");
+             playFinalWinSound(); // Play the true final win sound
+             stopTimer(); // Stop everything including chaos music
+             gameActive = false;
+             currentPhase = PHASE.WON;
+
+             // Clean up chaos mode
+             hideOverlay('ultraChaosHintScreen');
+             document.getElementById('invisibleButton')?.remove();
+             body.style.cursor = 'default'; // Restore cursor
+
+             // Show the Super End Screen
+             wastedTime.textContent = totalSeconds;
+             finalTimeTotal.textContent = `Total time: ${totalSeconds}s`;
+             showOverlay('superEndScreen');
+             triggerConfetti(); // Final confetti burst
+        }
+
+
+        // --- Confetti Effect ---
+        function triggerConfetti() { /* ... same as before ... */ const c = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800', '#ff5722']; const n = 150; confettiContainer.innerHTML = ''; for (let i = 0; i < n; i++) { const cf = document.createElement('div'); cf.classList.add('confetti'); cf.style.left = `${Math.random()*100}vw`; cf.style.backgroundColor = c[Math.floor(Math.random()*c.length)]; const s = 5 + Math.random()*10; cf.style.width = `${s}px`; cf.style.height = `${s}px`; cf.style.animationDuration = `${2+Math.random()*2}s`; cf.style.animationDelay = `${Math.random()*1}s`; if (Math.random() > 0.5) cf.style.borderRadius = '50%'; confettiContainer.appendChild(cf); cf.addEventListener('animationend', () => { cf.remove(); }); } }
+        // --- Utility Functions ---
+        function showOverlay(id) { const o = document.getElementById(id); if (o) { o.classList.remove('hidden'); o.classList.add('visible'); } }
+        function hideOverlay(id) { const o = document.getElementById(id); if (o) { o.classList.remove('visible'); o.classList.add('hidden'); } }
+        function hideAllOverlays() { document.querySelectorAll('.screen').forEach(el => hideOverlay(el.id)); }
+
+        // --- Global Event Listeners ---
+        document.body.addEventListener('click', initSounds, { once: true });
+        document.body.addEventListener('touchstart', initSounds, { once: true });
+        gameArea.addEventListener('mousemove', (event) => moveButton(event.clientX, event.clientY));
+        gameArea.addEventListener('touchmove', (event) => { event.preventDefault(); if (event.touches.length > 0) moveButton(event.touches[0].clientX, event.touches[0].clientY); }, { passive: false });
+        startButton.addEventListener('click', () => { if (currentPhase === PHASE.RUNNING || currentPhase === PHASE.FAKE_CLONE_VISIBLE) { console.warn("Clicked running button?"); playSound(clickSynth); shakeScreen(); } });
+        fakeStartButton.addEventListener('click', handleFakeCloneClick);
+        tryAgainButton.addEventListener('click', () => { playSound(clickSynth); resetToPhase1(); });
+
+        // --- Initial Game Setup ---
+        console.log("Just Click - Ultimate Chaos Troll v3 Initialized. Abandon all hope.");
+        // Timer starts on first interaction.
+
+    </script>
+</body>
+</html>
